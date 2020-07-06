@@ -1,0 +1,149 @@
+/*
+Make an Arduino app that sends anOSC message over UDP (to Qlab) to trigger the start of a Cue
+Written for the purpose to give a Livestream presenter the posibility to start Qlab cue's 
+06-07-2020 Steven Geerts v1.0
+
+make sure you adapt the Arduino IP, the Qlab IP, the target (Qlab) port and the Qlab Cue numbers. 
+In this case it supports 5 buttons, but you cab add as many as your Arduino supports by copying and adapting the code. 
+This code is tested and used on an Arduino One with a standard Arduino Ethernet shield. 
+
+You need the OSCMessage component by Adrian Freed (many thanks for your great work!) 
+This code is based on examples I found on the internet. If you feel like i did not respect your license, plezse let me know so I can adapt my code. 
+
+   
+ */
+#include <Ethernet.h>
+#include <EthernetUdp.h>
+#include <SPI.h>
+#include <OSCMessage.h>
+
+EthernetUDP Udp;
+
+
+byte myMac[] = { 0xA6, 0x61, 0x0A, 0xAE, 0x47, 0xA9 };  //enter the ethernet address of the mac
+byte myIp[] = { 192, 168, 8, 9 };  //enter the IP address assigned to the Arduino
+IPAddress outIp(192, 168, 8, 100 ); //this is the IP adress of your Mac running Qlab (the targer machine) 
+const unsigned int outPort = 53000; //the destination port that OSC messages are sent to
+const unsigned int inPort = 9000;   //the port on the Arduino that receives OSC messages
+
+
+// Digital Pin Layout. Pin 1,2,4 should not be used
+int inPin1 = 2;         // the number of the input pin for switch 1
+int inPin2 = 3;         // the number of the input pin for switch 2
+int inPin3 = 5;         // the number of the input pin for switch 3
+int inPin4 = 6;         // the number of the input pin for switch 4
+int inPin5 = 7;         // the number of the input pin for switch 5
+
+//Integer and defaults definition
+int reading1;           // the current reading from the input pin 1
+int reading2;           // the current reading from the input pin 2
+int reading3;           // the current reading from the input pin 3
+int reading4;           // the current reading from the input pin 4
+int reading5;           // the current reading from the input pin 5
+int previous1 = HIGH;    // the previous reading from the input pin 1
+int previous2 = HIGH;    // the previous reading from the input pin 2
+int previous3 = HIGH;    // the previous reading from the input pin 3
+int previous4 = HIGH;    // the previous reading from the input pin 4
+int previous5 = HIGH;    // the previous reading from the input pin 5
+
+// the follow variables are long's because the time, measured in miliseconds,
+// will quickly become a bigger number than can be stored in an int.
+long time = 0;         // the last time the output pin was toggled
+long debounce = 500;   // the debounce time, If this time is not passed, the code will not accept a new button press. increase if Cues are triggered randomely.
+
+// Initialise
+void setup() {
+  Serial.begin(9600);
+  delay(5000);
+  // start the Ethernet connection:
+  Ethernet.begin(myMac ,myIp);   //internet settings
+  // print your local IP address:
+  Serial.print("My IP is ");
+  Serial.println(Ethernet.localIP());
+  Udp.begin(inPort);
+  // Define defauls for the input pins.
+  pinMode(inPin1, INPUT_PULLUP);
+  pinMode(inPin2, INPUT_PULLUP);
+  pinMode(inPin3, INPUT_PULLUP);
+  pinMode(inPin4, INPUT_PULLUP);
+  pinMode(inPin5, INPUT_PULLUP);  
+
+}
+
+//Main program
+void loop() {
+ // Read input one and check if it has changed, and not have been pushed shortly before
+ reading1 = digitalRead(inPin1);
+ if (reading1 == LOW && previous1 == HIGH && millis() - time > debounce) {
+    // build the actual OSC message
+    OSCMessage msg("/cue/1/start");
+    // send the OSC message
+    Udp.beginPacket(outIp, outPort);
+    msg.send(Udp); // send the bytes to the SLIP stream
+    Udp.endPacket(); // mark the end of the OSC Packet
+    // back to zerro and other housekeeping
+    msg.empty(); // free space occupied by message
+    time = millis();   
+    Serial.println("Buton 1 was pushed"); 
+  }
+  previous1 = reading1;
+
+  // Read input two and check if it has changed, and not have been pushed shortly before
+  // For other clearification, see comments for input 1
+ reading2 = digitalRead(inPin2);
+ if (reading2 == LOW && previous2 == HIGH && millis() - time > debounce) {
+    OSCMessage msg("/cue/2/start");
+    Udp.beginPacket(outIp, outPort);
+    msg.send(Udp); // send the bytes to the SLIP stream
+    Udp.endPacket(); // mark the end of the OSC Packet
+    msg.empty(); // free space occupied by message
+    time = millis();    
+    Serial.println("Buton 2 was pushed");
+  }
+  previous2 = reading2;
+
+  // Read input three and check if it has changed, and not have been pushed shortly before
+  // For other clearification, see comments for input 1
+ reading3 = digitalRead(inPin3);
+ if (reading3 == LOW && previous3 == HIGH && millis() - time > debounce) {
+    OSCMessage msg("/cue/3/start");
+    Udp.beginPacket(outIp, outPort);
+    msg.send(Udp); // send the bytes to the SLIP stream
+    Udp.endPacket(); // mark the end of the OSC Packet
+    msg.empty(); // free space occupied by message
+    time = millis();  
+    Serial.println("Buton 3 was pushed");  
+  }
+  previous3 = reading3;
+
+  // Read input four and check if it has changed, and not have been pushed shortly before
+  // For other clearification, see comments for input 1
+  reading4 = digitalRead(inPin4);
+  if (reading4 == LOW && previous4 == HIGH && millis() - time > debounce) {
+    OSCMessage msg("/cue/4/start");
+    Udp.beginPacket(outIp, outPort);
+    msg.send(Udp); // send the bytes to the SLIP stream
+    Udp.endPacket(); // mark the end of the OSC Packet
+    msg.empty(); // free space occupied by message
+    time = millis();   
+    Serial.println("Buton 4 was pushed"); 
+  }
+  previous4 = reading4;
+
+  // Read input five and check if it has changed, and not have been pushed shortly before
+  // For other clearification, see comments for input 1
+  reading5 = digitalRead(inPin5);
+  if (reading5 == LOW && previous5 == HIGH && millis() - time > debounce) {
+    OSCMessage msg("/cue/5/start");
+    Udp.beginPacket(outIp, outPort);
+    msg.send(Udp); // send the bytes to the SLIP stream
+    Udp.endPacket(); // mark the end of the OSC Packet
+    msg.empty(); // free space occupied by message
+    time = millis();   
+    Serial.println("Buton 5 was pushed"); 
+  }
+  previous5 = reading5;
+
+}
+
+
